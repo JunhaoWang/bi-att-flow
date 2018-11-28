@@ -1,0 +1,4 @@
+tensorflow-gpu
+nltk==3.2.1
+tqdm==4.7.4
+Jinja2
