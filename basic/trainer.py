@@ -53,9 +53,10 @@ class MultiGPUTrainer(object):
                 losses.append(loss)
                 grads_list.append(grads)
 
-        self.loss = tf.add_n(losses)/len(losses)
-        self.grads = average_gradients(grads_list)
-        self.train_op = self.opt.apply_gradients(self.grads, global_step=self.global_step)
+        with tf.variable_scope(tf.get_variable_scope(), reuse=tf.AUTO_REUSE):
+            self.loss = tf.add_n(losses)/len(losses)
+            self.grads = average_gradients(grads_list)
+            self.train_op = self.opt.apply_gradients(self.grads, global_step=self.global_step)
 
     def step(self, sess, batches, get_summary=False):
         assert isinstance(sess, tf.Session)
