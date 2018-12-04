@@ -37,6 +37,7 @@ flags.DEFINE_bool("eval", True, "eval? [True]")
 flags.DEFINE_bool("wy", False, "Use wy for loss / eval? [False]")
 flags.DEFINE_bool("na", False, "Enable no answer strategy and learn bias? [False]")
 flags.DEFINE_float("th", 0.5, "Threshold [0.5]")
+# flags.DEFINE_bool("mixup", False, "Enable mixup? [False]")
 
 # Training / test parameters
 flags.DEFINE_integer("batch_size", 60, "Batch size [60]")
@@ -115,6 +116,10 @@ flags.DEFINE_bool("dynamic_att", False, "Dynamic attention [False]")
 
 # Custom FLAGS
 flags.DEFINE_integer("emb_mat", 0, "embedding matrix")
+flags.DEFINE_bool("training_now", True, "Training now? [True]")
+flags.DEFINE_bool("validating_now", False, "Validating now? [False]")
+flags.DEFINE_bool("testing_now", False, "Testing now? [False]")
+flags.DEFINE_bool("mix_mat", 0, "mixup matrix")
 
 def main(_):
     config = flags.FLAGS

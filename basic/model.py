@@ -11,6 +11,15 @@ from my.tensorflow.nn import softsel, get_logits, highway_network, multi_conv1d
 from my.tensorflow.rnn import bidirectional_dynamic_rnn
 from my.tensorflow.rnn_cell import SwitchableDropoutWrapper, AttentionCell
 
+def create_mixup_mat(dim, ratio=0.5):
+    mix_card = int(dim * ratio)
+    lambdas = np.random.uniform(size=mix_card)
+    inds = np.random.choice(list(range(dim-1)), size=mix_card, replace=False)
+    temp = np.eye(dim)
+    for ind, i in enumerate(inds):
+        temp[i][i] = lambdas[ind]
+        temp[i][i+1] = 1 - lambdas[ind]
+    return temp.astype(float)
 
 def get_multi_gpu_models(config):
     models = []
@@ -79,6 +88,11 @@ class Model(object):
         JX = tf.shape(self.x)[2]
         JQ = tf.shape(self.q)[1]
         M = tf.shape(self.x)[1]
+        # mixup mat
+        with tf.variable_scope("mixup"):
+            config.mix_mat = tf.constant(create_mixup_mat(N))
+
+
         dc, dw, dco = config.char_emb_size, config.word_emb_size, config.char_out_size
 
         with tf.variable_scope("emb"):
@@ -189,7 +203,23 @@ class Model(object):
                 second_cell_bw = d_cell3_bw
 
             (fw_g0, bw_g0), _ = bidirectional_dynamic_rnn(first_cell_fw, first_cell_bw, p0, x_len, dtype='float', scope='g0')  # [N, M, JX, 2d]
+
+            # config.testing_now = False
+            # config.training_now = True
+            # config.validating_now = False
+
+            # Mixup happens here
             g0 = tf.concat(axis=3, values=[fw_g0, bw_g0])
+
+            g0 = tf.cond(
+                tf.constant(config.training_now and not config.validating_now and not config.testing_now, dtype=tf.bool),
+                lambda: tf.tensordot(tf.cast(config.mix_mat, g0.dtype), g0, (-1, 0)),
+                lambda: g0
+            )
+
+            g0 = tf.Print(g0, [tf.shape(g0), g0], "\ng0 is ")
+
+
             (fw_g1, bw_g1), _ = bidirectional_dynamic_rnn(second_cell_fw, second_cell_bw, g0, x_len, dtype='float', scope='g1')  # [N, M, JX, 2d]
             g1 = tf.concat(axis=3, values=[fw_g1, bw_g1])
 
@@ -270,14 +300,45 @@ class Model(object):
             """
             tf.add_to_collection('losses', ce_loss)
 
+
+
         else:
             if config.na:
                 na = tf.reshape(self.na, [-1, 1])
-                concat_y = tf.concat(axis=1, values=[na, tf.reshape(self.y, [-1, M * JX])])
+                cast_y = tf.cast(self,y, 'float')
+                cast_y2 = tf.cast(self,y2, 'float')
+                cast_y = tf.cond(
+                    tf.constant(config.training_now and not config.validating_now and not config.testing_now, dtype=tf.bool),
+                    lambda: tf.tensordot(tf.cast(config.mix_mat, cast_y.dtype), cast_y, (-1, 0)),
+                    lambda: cast_y
+                )
+                cast_y2 = tf.cond(
+                    tf.constant(config.training_now and not config.validating_now and not config.testing_now, dtype=tf.bool),
+                    lambda: tf.tensordot(tf.cast(config.mix_mat, cast_y2.dtype), cast_y2, (-1, 0)),
+                    lambda: cast_y2
+                )
+                concat_y = tf.concat(axis=1, values=[na, tf.reshape(cast_y, [-1, M * JX])])
                 losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.concat_logits, labels=tf.cast(concat_y, 'float'))
-                concat_y2 = tf.concat(axis=1, values=[na, tf.reshape(self.y2, [-1, M * JX])])
+                concat_y2 = tf.concat(axis=1, values=[na, tf.reshape(cast_y2, [-1, M * JX])])
                 losses2 = tf.nn.softmax_cross_entropy_with_logits(logits=self.concat_logits2, labels=tf.cast(concat_y2, 'float'))
             else:
+                # self.logits = tf.Print(self.logits, [self.y, tf.shape(self.y), self.logits, tf.shape(self.logits)], ' y1, logits1 is ')
+                # self.logits2 = tf.Print(self.logits2, [self.y2, tf.shape(self.y2), self.logits2, tf.shape(self.logits2)], ' y2, logits2 is ')
+
+                self.logits = tf.cond(
+                    tf.constant(config.training_now and not config.validating_now and not config.testing_now,
+                                dtype=tf.bool),
+                    lambda: tf.tensordot(tf.cast(config.mix_mat, self.logits.dtype), self.logits, (-1, 0)),
+                    lambda: self.logits
+                )
+
+                self.logits2 = tf.cond(
+                    tf.constant(config.training_now and not config.validating_now and not config.testing_now,
+                                dtype=tf.bool),
+                    lambda: tf.tensordot(tf.cast(config.mix_mat, self.logits2.dtype), self.logits2, (-1, 0)),
+                    lambda: self.logits2
+                )
+
                 losses = tf.nn.softmax_cross_entropy_with_logits(
                     logits=self.logits, labels=tf.cast(tf.reshape(self.y, [-1, M * JX]), 'float'))
                 losses2 = tf.nn.softmax_cross_entropy_with_logits(

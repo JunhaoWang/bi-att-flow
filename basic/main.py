@@ -4,7 +4,7 @@ import math
 import os
 import shutil
 from pprint import pprint
-
+import pickle
 import tensorflow as tf
 from tqdm import tqdm
 import numpy as np
@@ -63,6 +63,7 @@ def _config_debug(config):
 
 
 def _train(config):
+
     data_filter = get_squad_data_filter(config)
     train_data = read_data(config, 'train', config.load, data_filter=data_filter)
     dev_data = read_data(config, 'dev', True, data_filter=data_filter)
@@ -95,10 +96,20 @@ def _train(config):
     num_steps = config.num_steps or int(math.ceil(train_data.num_examples / (config.batch_size * config.num_gpus))) * config.num_epochs
     global_step = 0
     for batches in tqdm(train_data.get_multi_batches(config.batch_size, config.num_gpus,
-                                                     num_steps=num_steps, shuffle=True, cluster=config.cluster), total=num_steps):
+                                                     num_steps=num_steps, shuffle=False, cluster=config.cluster), total=num_steps):
+
+        config.testing_now = False
+        config.training_now = True
+        config.validating_now = False
+
         global_step = sess.run(model.global_step) + 1  # +1 because all calculations are done after step
         get_summary = global_step % config.log_period == 0
         loss, summary, train_op = trainer.step(sess, batches, get_summary=get_summary)
+
+        # with open('data_unshuffled.pickle', 'wb') as handle:
+        #     pickle.dump(batches[0][1], handle, protocol=pickle.HIGHEST_PROTOCOL)
+        # raise Exception('leave')
+
         if get_summary:
             graph_handler.add_summary(summary, global_step)
 
@@ -110,6 +121,11 @@ def _train(config):
             continue
         # Occasional evaluation
         if global_step % config.eval_period == 0:
+
+            config.testing_now = False
+            config.training_now = True
+            config.validating_now = True
+
             num_steps = math.ceil(dev_data.num_examples / (config.batch_size * config.num_gpus))
             if 0 < config.val_num_batches < num_steps:
                 num_steps = config.val_num_batches
@@ -156,6 +172,11 @@ def _test(config):
 
     e = None
     for multi_batch in tqdm(test_data.get_multi_batches(config.batch_size, config.num_gpus, num_steps=num_steps, cluster=config.cluster), total=num_steps):
+
+        config.testing_now = True
+        config.training_now = False
+        config.validating_now = False
+
         ei = evaluator.get_evaluation(sess, multi_batch)
         e = ei if e is None else e + ei
         if config.vis:
