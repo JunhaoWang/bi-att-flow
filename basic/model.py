@@ -315,7 +315,7 @@ class Model(object):
                     lambda: g0
                 )
 
-            g0 = tf.Print(g0, [tf.shape(g0), g0], "\ng0 is ")
+            # g0 = tf.Print(g0, [tf.shape(g0), g0], "\ng0 is ")
 
 
             (fw_g1, bw_g1), _ = bidirectional_dynamic_rnn(second_cell_fw, second_cell_bw, g0, x_len, dtype='float', scope='g1')  # [N, M, JX, 2d]
