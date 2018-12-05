@@ -89,7 +89,8 @@ def _train(config):
     graph_handler = GraphHandler(config, model)  # controls all tensors and variables in the graph, including loading /saving
 
     # Variables
-    sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+    sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=False))
+
     graph_handler.initialize(sess)
 
     # Begin training
