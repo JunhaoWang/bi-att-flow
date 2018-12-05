@@ -26,7 +26,7 @@ flags.DEFINE_string("answer_dir", "answer", "answer dir [answer]")
 flags.DEFINE_string("device", "/cpu:0", "default device for summing gradients. [/cpu:0]")
 flags.DEFINE_string("device_type", "gpu", "device for computing gradients (parallelization). cpu | gpu [gpu]")
 flags.DEFINE_integer("num_gpus", 1, "num of gpus or cpus for computing gradients [1]")
-flags.DEFINE_string("specific_gpu", "/GPU:0", "specific device for computing gradients (parallelization). [/GPU:0]")
+flags.DEFINE_string("specific_gpu", "not_specified", "specific device for computing gradients (parallelization). not_specified | /GPU:0 [not_specified]")
 
 # Essential training and test options
 flags.DEFINE_string("mode", "test", "trains | test | forward [test]")
@@ -127,6 +127,8 @@ def main(_):
     config = flags.FLAGS
 
     config.out_dir = os.path.join(config.out_base_dir, config.model_name, str(config.run_id).zfill(2))
+
+    assert not (config.num_gpus > 1 and config.specific_gpu != 'not_specified')
 
     m(config)
 
