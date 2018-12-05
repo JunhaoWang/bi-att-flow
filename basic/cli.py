@@ -26,6 +26,7 @@ flags.DEFINE_string("answer_dir", "answer", "answer dir [answer]")
 flags.DEFINE_string("device", "/cpu:0", "default device for summing gradients. [/cpu:0]")
 flags.DEFINE_string("device_type", "gpu", "device for computing gradients (parallelization). cpu | gpu [gpu]")
 flags.DEFINE_integer("num_gpus", 1, "num of gpus or cpus for computing gradients [1]")
+flags.DEFINE_string("specific_gpu", "/device:GPU:0", "specific device for computing gradients (parallelization). [/device:GPU:0]")
 
 # Essential training and test options
 flags.DEFINE_string("mode", "test", "trains | test | forward [test]")
@@ -39,7 +40,7 @@ flags.DEFINE_bool("na", False, "Enable no answer strategy and learn bias? [False
 flags.DEFINE_float("th", 0.5, "Threshold [0.5]")
 flags.DEFINE_bool("mixup", False, "Enable mixup? [False]")
 flags.DEFINE_bool("zoneout", False, "Enable zoneout? [False]")
-
+flags.DEFINE_bool("shuffle", False, "Shuffle data? [False]")
 # Training / test parameters
 flags.DEFINE_integer("batch_size", 60, "Batch size [60]")
 flags.DEFINE_integer("val_num_batches", 100, "validation num batches [100]")
@@ -117,9 +118,9 @@ flags.DEFINE_bool("dynamic_att", False, "Dynamic attention [False]")
 
 # Custom FLAGS
 flags.DEFINE_integer("emb_mat", 0, "embedding matrix")
-flags.DEFINE_bool("training_now", True, "Training now? [True]")
-flags.DEFINE_bool("validating_now", False, "Validating now? [False]")
-flags.DEFINE_bool("testing_now", False, "Testing now? [False]")
+# flags.DEFINE_bool("training_now", True, "Training now? [True]")
+# flags.DEFINE_bool("validating_now", False, "Validating now? [False]")
+# flags.DEFINE_bool("testing_now", False, "Testing now? [False]")
 flags.DEFINE_bool("mix_mat", 0, "mixup matrix")
 
 def main(_):

@@ -34,7 +34,22 @@ class ZoneoutWrapper(tf.contrib.rnn.RNNCell):
       new_state = tf.split(value=new_state, num_or_size_splits=2, axis=1)
       state = tf.split(value=state, num_or_size_splits=2, axis=1)
     final_new_state = [new_state[0], new_state[1]]
-    if self._is_training:
+
+    # if self._is_training:
+    #   for i, state_element in enumerate(state):
+    #     random_tensor = 1 - self._zoneout_prob  # keep probability
+    #     random_tensor += tf.random_uniform(tf.shape(state_element))
+    #     # 0. if [zoneout_prob, 1.0) and 1. if [1.0, 1.0 + zoneout_prob)
+    #     binary_tensor = tf.floor(random_tensor)
+    #     final_new_state[
+    #         i] = (new_state[i] - state_element) * binary_tensor + state_element
+    # else:
+    #   for i, state_element in enumerate(state):
+    #     final_new_state[
+    #         i] = state_element * self._zoneout_prob + new_state[i] * (
+    #             1 - self._zoneout_prob)
+
+    def temp1():
       for i, state_element in enumerate(state):
         random_tensor = 1 - self._zoneout_prob  # keep probability
         random_tensor += tf.random_uniform(tf.shape(state_element))
@@ -42,11 +57,19 @@ class ZoneoutWrapper(tf.contrib.rnn.RNNCell):
         binary_tensor = tf.floor(random_tensor)
         final_new_state[
             i] = (new_state[i] - state_element) * binary_tensor + state_element
-    else:
+      return final_new_state
+    def temp2():
       for i, state_element in enumerate(state):
         final_new_state[
             i] = state_element * self._zoneout_prob + new_state[i] * (
                 1 - self._zoneout_prob)
+      return final_new_state
+
+    final_new_state = tf.cond(self._is_training,
+            lambda: temp1(),
+            lambda: temp2()
+            )
+
     if isinstance(self._cell.state_size, tuple):
       return output, tf.contrib.rnn.LSTMStateTuple(
           final_new_state[0], final_new_state[1])
@@ -195,8 +218,8 @@ class Model(object):
         cell_fw = BasicLSTMCell(d, state_is_tuple=True)
         cell_bw = BasicLSTMCell(d, state_is_tuple=True)
         if config.zoneout:
-            d_cell_fw = ZoneoutWrapper(cell_fw, is_training=config.training_now, input_keep_prob=config.input_keep_prob)
-            d_cell_bw = ZoneoutWrapper(cell_bw, is_training=config.training_now, input_keep_prob=config.input_keep_prob)
+            d_cell_fw = ZoneoutWrapper(cell_fw, is_training=self.is_train, input_keep_prob=config.input_keep_prob)
+            d_cell_bw = ZoneoutWrapper(cell_bw, is_training=self.is_train, input_keep_prob=config.input_keep_prob)
         else:
             d_cell_fw = SwitchableDropoutWrapper(cell_fw, self.is_train, input_keep_prob=config.input_keep_prob)
             d_cell_bw = SwitchableDropoutWrapper(cell_bw, self.is_train, input_keep_prob=config.input_keep_prob)
@@ -205,8 +228,8 @@ class Model(object):
         cell2_bw = BasicLSTMCell(d, state_is_tuple=True)
 
         if config.zoneout:
-            d_cell2_fw = ZoneoutWrapper(cell2_fw, is_training=config.training_now, input_keep_prob=config.input_keep_prob)
-            d_cell2_bw = ZoneoutWrapper(cell2_bw, is_training=config.training_now, input_keep_prob=config.input_keep_prob)
+            d_cell2_fw = ZoneoutWrapper(cell2_fw, is_training=self.is_train, input_keep_prob=config.input_keep_prob)
+            d_cell2_bw = ZoneoutWrapper(cell2_bw, is_training=self.is_train, input_keep_prob=config.input_keep_prob)
         else:
             d_cell2_fw = SwitchableDropoutWrapper(cell2_fw, self.is_train, input_keep_prob=config.input_keep_prob)
             d_cell2_bw = SwitchableDropoutWrapper(cell2_bw, self.is_train, input_keep_prob=config.input_keep_prob)
@@ -215,8 +238,8 @@ class Model(object):
         cell3_bw = BasicLSTMCell(d, state_is_tuple=True)
 
         if config.zoneout:
-            d_cell3_fw = ZoneoutWrapper(cell3_fw, is_training=config.training_now, input_keep_prob=config.input_keep_prob)
-            d_cell3_bw = ZoneoutWrapper(cell3_bw, is_training=config.training_now, input_keep_prob=config.input_keep_prob)
+            d_cell3_fw = ZoneoutWrapper(cell3_fw, is_training=self.is_train, input_keep_prob=config.input_keep_prob)
+            d_cell3_bw = ZoneoutWrapper(cell3_bw, is_training=self.is_train, input_keep_prob=config.input_keep_prob)
         else:
             d_cell3_fw = SwitchableDropoutWrapper(cell3_fw, self.is_train, input_keep_prob=config.input_keep_prob)
             d_cell3_bw = SwitchableDropoutWrapper(cell3_bw, self.is_train, input_keep_prob=config.input_keep_prob)
@@ -225,8 +248,8 @@ class Model(object):
         cell4_bw = BasicLSTMCell(d, state_is_tuple=True)
 
         if config.zoneout:
-            d_cell4_fw = ZoneoutWrapper(cell4_fw, is_training=config.training_now, input_keep_prob=config.input_keep_prob)
-            d_cell4_bw = ZoneoutWrapper(cell4_bw, is_training=config.training_now, input_keep_prob=config.input_keep_prob)
+            d_cell4_fw = ZoneoutWrapper(cell4_fw, is_training=self.is_train, input_keep_prob=config.input_keep_prob)
+            d_cell4_bw = ZoneoutWrapper(cell4_bw, is_training=self.is_train, input_keep_prob=config.input_keep_prob)
         else:
             d_cell4_fw = SwitchableDropoutWrapper(cell4_fw, self.is_train, input_keep_prob=config.input_keep_prob)
             d_cell4_bw = SwitchableDropoutWrapper(cell4_bw, self.is_train, input_keep_prob=config.input_keep_prob)
@@ -278,7 +301,7 @@ class Model(object):
 
             if config.mixup:
                 g0 = tf.cond(
-                    tf.constant(config.training_now and not config.validating_now and not config.testing_now, dtype=tf.bool),
+                    self.is_train,
                     lambda: tf.tensordot(tf.cast(config.mix_mat, g0.dtype), g0, (-1, 0)),
                     lambda: g0
                 )
@@ -337,20 +360,29 @@ class Model(object):
             self.wyp = wyp
 
     def _build_loss(self):
+        # TODO: fix this mixup
+
         config = self.config
         JX = tf.shape(self.x)[2]
         M = tf.shape(self.x)[1]
         JQ = tf.shape(self.q)[1]
 
         loss_mask = tf.reduce_max(tf.cast(self.q_mask, 'float'), 1)
+        cast_wy = tf.cast(self.wy, 'float')
         if config.wy:
+            if config.mixup:
+                cast_wy = tf.cond(
+                    self.is_train,
+                    lambda: tf.tensordot(tf.cast(config.mix_mat, cast_wy.dtype), cast_wy, (-1, 0)),
+                    lambda: cast_wy
+                )
             losses = tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=tf.reshape(self.logits2, [-1, M, JX]), labels=tf.cast(self.wy, 'float'))  # [N, M, JX]
-            num_pos = tf.reduce_sum(tf.cast(self.wy, 'float'))
+                logits=tf.reshape(self.logits2, [-1, M, JX]), labels=cast_wy)  # [N, M, JX]
+            num_pos = tf.reduce_sum(cast_wy)
             num_neg = tf.reduce_sum(tf.cast(self.x_mask, 'float')) - num_pos
             damp_ratio = num_pos / num_neg
             dampened_losses = losses * (
-                (tf.cast(self.x_mask, 'float') - tf.cast(self.wy, 'float')) * damp_ratio + tf.cast(self.wy, 'float'))
+                (tf.cast(self.x_mask, 'float') - cast_wy) * damp_ratio + cast_wy)
             new_losses = tf.reduce_sum(dampened_losses, [1, 2])
             ce_loss = tf.reduce_mean(loss_mask * new_losses)
             """
@@ -375,12 +407,12 @@ class Model(object):
                 cast_y2 = tf.cast(self,y2, 'float')
                 if config.mixup:
                     cast_y = tf.cond(
-                        tf.constant(config.training_now and not config.validating_now and not config.testing_now, dtype=tf.bool),
+                        self.is_train,
                         lambda: tf.tensordot(tf.cast(config.mix_mat, cast_y.dtype), cast_y, (-1, 0)),
                         lambda: cast_y
                     )
                     cast_y2 = tf.cond(
-                        tf.constant(config.training_now and not config.validating_now and not config.testing_now, dtype=tf.bool),
+                        self.is_train,
                         lambda: tf.tensordot(tf.cast(config.mix_mat, cast_y2.dtype), cast_y2, (-1, 0)),
                         lambda: cast_y2
                     )
@@ -389,27 +421,25 @@ class Model(object):
                 concat_y2 = tf.concat(axis=1, values=[na, tf.reshape(cast_y2, [-1, M * JX])])
                 losses2 = tf.nn.softmax_cross_entropy_with_logits(logits=self.concat_logits2, labels=tf.cast(concat_y2, 'float'))
             else:
-                # self.logits = tf.Print(self.logits, [self.y, tf.shape(self.y), self.logits, tf.shape(self.logits)], ' y1, logits1 is ')
-                # self.logits2 = tf.Print(self.logits2, [self.y2, tf.shape(self.y2), self.logits2, tf.shape(self.logits2)], ' y2, logits2 is ')
+                cast_y = tf.cast(tf.reshape(self.y, [-1, M * JX]), 'float')
+                cast_y2 = tf.cast(tf.reshape(self.y2, [-1, M * JX]), 'float')
                 if config.mixup:
-                    self.logits = tf.cond(
-                        tf.constant(config.training_now and not config.validating_now and not config.testing_now,
-                                    dtype=tf.bool),
-                        lambda: tf.tensordot(tf.cast(config.mix_mat, self.logits.dtype), self.logits, (-1, 0)),
-                        lambda: self.logits
+                    cast_y = tf.cond(
+                        self.is_train,
+                        lambda: tf.tensordot(tf.cast(config.mix_mat, cast_y.dtype), cast_y, (-1, 0)),
+                        lambda: cast_y
                     )
 
-                    self.logits2 = tf.cond(
-                        tf.constant(config.training_now and not config.validating_now and not config.testing_now,
-                                    dtype=tf.bool),
-                        lambda: tf.tensordot(tf.cast(config.mix_mat, self.logits2.dtype), self.logits2, (-1, 0)),
-                        lambda: self.logits2
+                    cast_y2 = tf.cond(
+                        self.is_train,
+                        lambda: tf.tensordot(tf.cast(config.mix_mat, cast_y2.dtype), cast_y2, (-1, 0)),
+                        lambda: cast_y2
                     )
 
                 losses = tf.nn.softmax_cross_entropy_with_logits(
-                    logits=self.logits, labels=tf.cast(tf.reshape(self.y, [-1, M * JX]), 'float'))
+                    logits=self.logits, labels=cast_y)
                 losses2 = tf.nn.softmax_cross_entropy_with_logits(
-                    logits=self.logits2, labels=tf.cast(tf.reshape(self.y2, [-1, M * JX]), 'float'))
+                    logits=self.logits2, labels=cast_y2)
             ce_loss = tf.reduce_mean(loss_mask * losses)
             ce_loss2 = tf.reduce_mean(loss_mask * losses2)
             tf.add_to_collection('losses', ce_loss)

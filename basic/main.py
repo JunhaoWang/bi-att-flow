@@ -96,11 +96,11 @@ def _train(config):
     num_steps = config.num_steps or int(math.ceil(train_data.num_examples / (config.batch_size * config.num_gpus))) * config.num_epochs
     global_step = 0
     for batches in tqdm(train_data.get_multi_batches(config.batch_size, config.num_gpus,
-                                                     num_steps=num_steps, shuffle=False, cluster=config.cluster), total=num_steps):
+                                                     num_steps=num_steps, shuffle=config.shuffle, cluster=config.cluster), total=num_steps):
 
-        config.testing_now = False
-        config.training_now = True
-        config.validating_now = False
+        # config.testing_now = False
+        # config.training_now = True
+        # config.validating_now = False
 
         global_step = sess.run(model.global_step) + 1  # +1 because all calculations are done after step
         get_summary = global_step % config.log_period == 0
@@ -122,9 +122,9 @@ def _train(config):
         # Occasional evaluation
         if global_step % config.eval_period == 0:
 
-            config.testing_now = False
-            config.training_now = True
-            config.validating_now = True
+            # config.testing_now = False
+            # config.training_now = True
+            # config.validating_now = True
 
             num_steps = math.ceil(dev_data.num_examples / (config.batch_size * config.num_gpus))
             if 0 < config.val_num_batches < num_steps:
@@ -173,9 +173,9 @@ def _test(config):
     e = None
     for multi_batch in tqdm(test_data.get_multi_batches(config.batch_size, config.num_gpus, num_steps=num_steps, cluster=config.cluster), total=num_steps):
 
-        config.testing_now = True
-        config.training_now = False
-        config.validating_now = False
+        # config.testing_now = True
+        # config.training_now = False
+        # config.validating_now = False
 
         ei = evaluator.get_evaluation(sess, multi_batch)
         e = ei if e is None else e + ei
