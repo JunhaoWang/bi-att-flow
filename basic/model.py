@@ -102,6 +102,7 @@ def get_multi_gpu_models(config):
                 #     tf.get_variable_scope().reuse_variables()
                 model = Model(config, scope, rep=gpu_idx == 0)
                 models.append(model)
+    assert (len(models) == 1)
     return models
 
 
