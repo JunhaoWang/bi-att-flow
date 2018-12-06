@@ -164,7 +164,7 @@ class Model(object):
         M = tf.shape(self.x)[1]
         # mixup mat
         with tf.variable_scope("mixup"):
-            config.mix_mat = tf.constant(create_mixup_mat(N))
+            config.mix_mat = tf.constant(create_mixup_mat(N, config.mix_rate))
 
 
         dc, dw, dco = config.char_emb_size, config.word_emb_size, config.char_out_size
