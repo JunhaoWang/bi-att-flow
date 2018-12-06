@@ -118,6 +118,7 @@ flags.DEFINE_bool("dynamic_att", False, "Dynamic attention [False]")
 
 # Custom FLAGS
 flags.DEFINE_integer("emb_mat", 0, "embedding matrix")
+flags.DEFINE_integer("new_emb_mat", 0, "embedding matrix")
 # flags.DEFINE_bool("training_now", True, "Training now? [True]")
 # flags.DEFINE_bool("validating_now", False, "Validating now? [False]")
 # flags.DEFINE_bool("testing_now", False, "Testing now? [False]")
